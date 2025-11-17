@@ -20,6 +20,9 @@
     <label>Full Name</label>
     <input id="name" placeholder="Full name">
 
+    <label>Email Address</label>
+    <input id="email" placeholder="example@gmail.com">
+
     <label>Phone (e.g. 0244123456)</label>
     <input id="phone" placeholder="0244123456">
 
@@ -27,7 +30,6 @@
 
     <button id="buyBtn">Buy Voucher (GHS 25)</button>
     <div id="status" class="msg"></div>
-    <pre id="debug" style="display:none"></pre>
   </div>
 
 <script>
@@ -41,31 +43,26 @@
     document.getElementById('refDiv').innerText = 'Referral code applied: ' + refCode;
     localStorage.setItem('auth_ref', refCode);
   } else {
-    const s = localStorage.getItem('auth_ref');
-    if (s) {
+    const saved = localStorage.getItem('auth_ref');
+    if (saved) {
       document.getElementById('refDiv').style.display = 'block';
-      document.getElementById('refDiv').innerText = 'Referral code: ' + s;
+      document.getElementById('refDiv').innerText = 'Referral code: ' + saved;
     }
   }
 
-  document.getElementById('buyBtn').addEventListener('click', async () => {
+  document.getElementById('buyBtn').addEventListener('click', async ()=>{
+
     const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const status = document.getElementById('status');
+
     status.innerText = '';
 
-    if (!name || !phone) {
-      status.innerText = 'Please enter name & phone.';
+    if (!name || !email || !phone) {
+      status.innerText = 'Please fill all fields (name, email, phone).';
       return;
     }
-
-    // ---- AUTO-GENERATE EMAIL FOR PAYSTACK ----
-    let fixedPhone = phone.replace("+", "").trim();
-    if (fixedPhone.startsWith("0")) {
-      fixedPhone = "233" + fixedPhone.slice(1);
-    }
-    const autoEmail = `${fixedPhone}@noemail.local`;  
-    // ------------------------------------------
 
     const ref = localStorage.getItem('auth_ref') || null;
 
@@ -74,35 +71,28 @@
     try {
       const resp = await fetch(CREATE_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          phone,
-          email: autoEmail,   // ✔ ALWAYS send valid email
-          ref
-        })
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ name, email, phone, ref })
       });
 
+      const data = await resp.json();
       if (!resp.ok) {
-        const txt = await resp.text();
-        status.innerText = 'Server error. See debug.';
-        console.error('create-payment failed', resp.status, txt);
+        status.innerText = data.message || "Payment creation failed.";
         return;
       }
 
-      const data = await resp.json();
       if (data.authorization_url) {
         window.location.href = data.authorization_url;
       } else {
-        status.innerText = 'Unexpected response from server.';
+        status.innerText = 'Unexpected server response.';
       }
+
     } catch (err) {
       console.error(err);
       status.innerText = 'Network error. Try again.';
     }
   });
 </script>
-
 </body>
 </html>
 
