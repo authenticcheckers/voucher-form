@@ -39,10 +39,8 @@
   if (refCode) {
     document.getElementById('refDiv').style.display = 'block';
     document.getElementById('refDiv').innerText = 'Referral code applied: ' + refCode;
-    // store for later (persist if they navigate)
     localStorage.setItem('auth_ref', refCode);
   } else {
-    // check localStorage
     const s = localStorage.getItem('auth_ref');
     if (s) {
       document.getElementById('refDiv').style.display = 'block';
@@ -50,7 +48,7 @@
     }
   }
 
-  document.getElementById('buyBtn').addEventListener('click', async ()=>{
+  document.getElementById('buyBtn').addEventListener('click', async () => {
     const name = document.getElementById('name').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const status = document.getElementById('status');
@@ -61,6 +59,14 @@
       return;
     }
 
+    // ---- AUTO-GENERATE EMAIL FOR PAYSTACK ----
+    let fixedPhone = phone.replace("+", "").trim();
+    if (fixedPhone.startsWith("0")) {
+      fixedPhone = "233" + fixedPhone.slice(1);
+    }
+    const autoEmail = `${fixedPhone}@noemail.local`;  
+    // ------------------------------------------
+
     const ref = localStorage.getItem('auth_ref') || null;
 
     status.innerText = 'Creating payment...';
@@ -68,15 +74,22 @@
     try {
       const resp = await fetch(CREATE_URL, {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ name, phone, ref })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          phone,
+          email: autoEmail,   // ✔ ALWAYS send valid email
+          ref
+        })
       });
+
       if (!resp.ok) {
         const txt = await resp.text();
         status.innerText = 'Server error. See debug.';
         console.error('create-payment failed', resp.status, txt);
         return;
       }
+
       const data = await resp.json();
       if (data.authorization_url) {
         window.location.href = data.authorization_url;
@@ -89,5 +102,7 @@
     }
   });
 </script>
+
 </body>
 </html>
+
