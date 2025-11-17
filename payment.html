@@ -21,7 +21,7 @@
     <input id="name" placeholder="Full name">
 
     <label>Email Address</label>
-    <input id="email" placeholder="example@gmail.com">
+    <input id="email" type="email" placeholder="example@gmail.com">
 
     <label>Phone (e.g. 0244123456)</label>
     <input id="phone" placeholder="0244123456">
@@ -38,61 +38,60 @@
   // capture referral code from URL
   const params = new URLSearchParams(window.location.search);
   const refCode = params.get("ref");
+
   if (refCode) {
-    document.getElementById('refDiv').style.display = 'block';
-    document.getElementById('refDiv').innerText = 'Referral code applied: ' + refCode;
-    localStorage.setItem('auth_ref', refCode);
+    localStorage.setItem("auth_ref", refCode);
+    document.getElementById("refDiv").style.display = "block";
+    document.getElementById("refDiv").innerText = "Referral code applied: " + refCode;
   } else {
-    const saved = localStorage.getItem('auth_ref');
+    const saved = localStorage.getItem("auth_ref");
     if (saved) {
-      document.getElementById('refDiv').style.display = 'block';
-      document.getElementById('refDiv').innerText = 'Referral code: ' + saved;
+      document.getElementById("refDiv").style.display = "block";
+      document.getElementById("refDiv").innerText = "Referral code: " + saved;
     }
   }
 
-  document.getElementById('buyBtn').addEventListener('click', async ()=>{
+  document.getElementById("buyBtn").addEventListener("click", async () => {
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const status = document.getElementById("status");
 
-    const name = document.getElementById('name').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const phone = document.getElementById('phone').value.trim();
-    const status = document.getElementById('status');
-
-    status.innerText = '';
+    status.innerText = "";
 
     if (!name || !email || !phone) {
-      status.innerText = 'Please fill all fields (name, email, phone).';
+      status.innerText = "Please fill all fields.";
       return;
     }
 
-    const ref = localStorage.getItem('auth_ref') || null;
+    const ref = localStorage.getItem("auth_ref") || null;
 
-    status.innerText = 'Creating payment...';
+    status.innerText = "Creating payment...";
 
     try {
       const resp = await fetch(CREATE_URL, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, phone, ref })
       });
 
-      const data = await resp.json();
       if (!resp.ok) {
-        status.innerText = data.message || "Payment creation failed.";
+        status.innerText = "Server error. Try again.";
         return;
       }
 
+      const data = await resp.json();
       if (data.authorization_url) {
         window.location.href = data.authorization_url;
       } else {
-        status.innerText = 'Unexpected server response.';
+        status.innerText = "Unexpected server response.";
       }
 
     } catch (err) {
+      status.innerText = "Network error. Try again.";
       console.error(err);
-      status.innerText = 'Network error. Try again.';
     }
   });
 </script>
 </body>
 </html>
-
