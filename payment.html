@@ -1,119 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>WASSCE Result Checker Voucher</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
-    }
-    .box {
-      max-width: 400px;
-      margin: auto;
-      background: white;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    h2 {
-      margin-top: 0;
-      text-align: center;
-      color: #2d2d2d;
-    }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-top: 12px;
-    }
-    input {
-      width: 100%;
-      padding: 12px;
-      margin-top: 6px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-    button {
-      width: 100%;
-      margin-top: 20px;
-      padding: 15px;
-      background: #0b7dda;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #095c9e;
-    }
-    .msg {
-      margin-top: 15px;
-      text-align: center;
-      font-size: 14px;
-      color: red;
-    }
+    body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;padding:20px}
+    .box{max-width:420px;margin:30px auto;background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
+    input{width:100%;padding:10px;margin-top:8px;border-radius:6px;border:1px solid #ccc}
+    button{width:100%;padding:12px;margin-top:14px;background:#0b7dda;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer}
+    .ref{font-size:13px;color:#666;margin-top:8px}
+    .msg{margin-top:12px;color:#c00}
   </style>
 </head>
 <body>
+  <div class="box">
+    <h2 style="text-align:center">WASSCE Result Checker Voucher</h2>
 
-<div class="box">
-  <h2>WASSCE Result Checker Voucher</h2>
+    <label>Full Name</label>
+    <input id="name" placeholder="Full name">
 
-  <label>Full Name</label>
-  <input id="name" type="text" placeholder="Enter full name">
+    <label>Phone (e.g. 0244123456)</label>
+    <input id="phone" placeholder="0244123456">
 
-  <label>Phone Number</label>
-  <input id="phone" type="text" placeholder="e.g. 0244123456">
+    <div id="refDiv" class="ref" style="display:none"></div>
 
-  <label>Email</label>
-  <input id="email" type="email" placeholder="example@gmail.com">
-
-  <button onclick="startPayment()">Buy Voucher (GHS 25)</button>
-
-  <div id="msg" class="msg"></div>
-</div>
+    <button id="buyBtn">Buy Voucher (GHS 25)</button>
+    <div id="status" class="msg"></div>
+    <pre id="debug" style="display:none"></pre>
+  </div>
 
 <script>
-async function startPayment() {
-    const name = document.getElementById("name").value.trim();
-    const phone = document.getElementById("phone").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const msg = document.getElementById("msg");
+  const CREATE_URL = "https://voucher-server-wzjj.onrender.com/create-payment";
 
-    msg.textContent = "";
+  // capture referral code from URL
+  const params = new URLSearchParams(window.location.search);
+  const refCode = params.get("ref");
+  if (refCode) {
+    document.getElementById('refDiv').style.display = 'block';
+    document.getElementById('refDiv').innerText = 'Referral code applied: ' + refCode;
+    // store for later (persist if they navigate)
+    localStorage.setItem('auth_ref', refCode);
+  } else {
+    // check localStorage
+    const s = localStorage.getItem('auth_ref');
+    if (s) {
+      document.getElementById('refDiv').style.display = 'block';
+      document.getElementById('refDiv').innerText = 'Referral code: ' + s;
+    }
+  }
+
+  document.getElementById('buyBtn').addEventListener('click', async ()=>{
+    const name = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const status = document.getElementById('status');
+    status.innerText = '';
 
     if (!name || !phone) {
-        msg.textContent = "Please enter name and phone number.";
-        return;
+      status.innerText = 'Please enter name & phone.';
+      return;
     }
 
-    msg.textContent = "Processing...";
+    const ref = localStorage.getItem('auth_ref') || null;
+
+    status.innerText = 'Creating payment...';
 
     try {
-        const res = await fetch("https://voucher-server-wzjj.onrender.com/create-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, phone, email })
-        });
-
-        const data = await res.json();
-
-        if (data.authorization_url) {
-            window.location.href = data.authorization_url;
-        } else {
-            msg.textContent = "Payment initialization failed.";
-        }
-
+      const resp = await fetch(CREATE_URL, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ name, phone, ref })
+      });
+      if (!resp.ok) {
+        const txt = await resp.text();
+        status.innerText = 'Server error. See debug.';
+        console.error('create-payment failed', resp.status, txt);
+        return;
+      }
+      const data = await resp.json();
+      if (data.authorization_url) {
+        window.location.href = data.authorization_url;
+      } else {
+        status.innerText = 'Unexpected response from server.';
+      }
     } catch (err) {
-        msg.textContent = "Server error. Try again.";
+      console.error(err);
+      status.innerText = 'Network error. Try again.';
     }
-}
+  });
 </script>
-
 </body>
 </html>
-
-
