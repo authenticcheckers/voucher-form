@@ -1,97 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>WASSCE Result Checker Voucher</title>
-  <style>
-    body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;padding:20px}
-    .box{max-width:420px;margin:30px auto;background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
-    input{width:100%;padding:10px;margin-top:8px;border-radius:6px;border:1px solid #ccc}
-    button{width:100%;padding:12px;margin-top:14px;background:#0b7dda;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer}
-    .ref{font-size:13px;color:#666;margin-top:8px}
-    .msg{margin-top:12px;color:#c00}
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Buy WASSCE Result Checker</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px #00000020;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #222;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0 18px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #0a7cff;
+            border: none;
+            color: white;
+            font-size: 18px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0563cc;
+        }
+
+        .note {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 14px;
+            color: #444;
+        }
+    </style>
 </head>
 <body>
-  <div class="box">
-    <h2 style="text-align:center">WASSCE Result Checker Voucher</h2>
+
+<div class="container">
+    <h2>Buy WASSCE Voucher</h2>
 
     <label>Full Name</label>
-    <input id="name" placeholder="Full name">
+    <input id="name" type="text" placeholder="Enter your name" required />
+
+    <label>Phone Number</label>
+    <input id="phone" type="text" placeholder="e.g. 0241234567" required />
 
     <label>Email Address</label>
-    <input id="email" type="email" placeholder="example@gmail.com">
+    <input id="email" type="email" placeholder="example@gmail.com" required />
 
-    <label>Phone (e.g. 0244123456)</label>
-    <input id="phone" placeholder="0244123456">
+    <label>Affiliate Code (Optional)</label>
+    <input id="ref" type="text" placeholder="e.g. AFF001" />
 
-    <div id="refDiv" class="ref" style="display:none"></div>
+    <button onclick="startPayment()">Proceed to Pay</button>
 
-    <button id="buyBtn">Buy Voucher (GHS 25)</button>
-    <div id="status" class="msg"></div>
-  </div>
+    <p class="note">Voucher price: <strong>GHS 25</strong></p>
+</div>
 
 <script>
-  const CREATE_URL = "https://voucher-server-wzjj.onrender.com/create-payment";
+    const BACKEND_URL = "https://voucher-server-wzjj.onrender.com"; // <-- CHANGE THIS
 
-  // capture referral code from URL
-  const params = new URLSearchParams(window.location.search);
-  const refCode = params.get("ref");
+    async function startPayment() {
+        const name = document.getElementById("name").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const ref = document.getElementById("ref").value.trim();
 
-  if (refCode) {
-    localStorage.setItem("auth_ref", refCode);
-    document.getElementById("refDiv").style.display = "block";
-    document.getElementById("refDiv").innerText = "Referral code applied: " + refCode;
-  } else {
-    const saved = localStorage.getItem("auth_ref");
-    if (saved) {
-      document.getElementById("refDiv").style.display = "block";
-      document.getElementById("refDiv").innerText = "Referral code: " + saved;
+        if (!name || !phone || !email) {
+            alert("Please fill in all required fields.");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/create-payment`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ name, phone, email, ref })
+            });
+
+            const data = await response.json();
+
+            if (data.authorization_url) {
+                window.location.href = data.authorization_url;
+            } else {
+                alert("Error: " + (data.error || "Payment initialization failed."));
+            }
+        } catch (err) {
+            alert("Network error. Please try again.");
+        }
     }
-  }
-
-  document.getElementById("buyBtn").addEventListener("click", async () => {
-    const name = document.getElementById("name").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const phone = document.getElementById("phone").value.trim();
-    const status = document.getElementById("status");
-
-    status.innerText = "";
-
-    if (!name || !email || !phone) {
-      status.innerText = "Please fill all fields.";
-      return;
-    }
-
-    const ref = localStorage.getItem("auth_ref") || null;
-
-    status.innerText = "Creating payment...";
-
-    try {
-      const resp = await fetch(CREATE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, ref })
-      });
-
-      if (!resp.ok) {
-        status.innerText = "Server error. Try again.";
-        return;
-      }
-
-      const data = await resp.json();
-      if (data.authorization_url) {
-        window.location.href = data.authorization_url;
-      } else {
-        status.innerText = "Unexpected server response.";
-      }
-
-    } catch (err) {
-      status.innerText = "Network error. Try again.";
-      console.error(err);
-    }
-  });
 </script>
+
 </body>
 </html>
+
